@@ -1,0 +1,50 @@
+/** English-only UI copy */
+export const copy = {
+  youAreInvited: "You are invited",
+  tapSeal: "Tap the seal",
+  skip: "Skip",
+  dearGuest: "Dear Guest",
+  enterName: "Enter your name",
+  scroll: "Scroll",
+  welcome: "Welcome",
+  ourStory: "Our Story",
+  families: "Families",
+  weddingDay: "Wedding Day",
+  gallery: "Gallery",
+  venue: "Venue",
+  dressCode: "Dress Code",
+  rsvp: "RSVP",
+  getDirections: "Get Directions",
+  addToCalendar: "Add to Calendar",
+  googleCalendar: "Google Calendar",
+  downloadIcs: "Download .ics",
+  musicOn: "Music on",
+  musicOff: "Music off",
+  share: "Share",
+  replay: "Replay invitation",
+  thankYou: "Thank you",
+  nextUp: "Next up",
+  attending: "Will you attend?",
+  yes: "Joyfully accept",
+  no: "Respectfully decline",
+  guests: "Number of guests",
+  meal: "Meal preference",
+  veg: "Vegetarian",
+  nonVeg: "Non-vegetarian",
+  other: "Other",
+  message: "Message to the couple",
+  publicWish: "Show my wish publicly",
+  submit: "Send RSVP",
+  submitting: "Sending…",
+  success: "Thank you, we can't wait to celebrate with you",
+  parking: "Parking",
+  hotels: "Stay",
+  weddingDayBanner: "It's wedding day — watch the livestream",
+  wishes: "Wishes",
+} as const;
+
+export type DictKey = keyof typeof copy;
+
+export function t(key: DictKey): string {
+  return copy[key];
+}

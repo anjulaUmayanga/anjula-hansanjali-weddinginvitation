@@ -1,0 +1,37 @@
+{
+  "anjula": {
+    "type": "one",
+    "name": "Anjula",
+    "maxGuests": 1
+  },
+  "anjula-hansa": {
+    "type": "two",
+    "name": "Anjula & Hansa",
+    "maxGuests": 2
+  },
+  "jayasiri-family": {
+    "type": "family",
+    "name": "Jayasiri",
+    "maxGuests": 4
+  },
+  "kasun": {
+    "type": "one",
+    "name": "Kasun",
+    "maxGuests": 1
+  },
+  "nethmi": {
+    "type": "one",
+    "name": "Nethmi",
+    "maxGuests": 1
+  },
+  "dilshan-amaya": {
+    "type": "two",
+    "name": "Dilshan & Amaya",
+    "maxGuests": 2
+  },
+  "perera-family": {
+    "type": "family",
+    "name": "Perera",
+    "maxGuests": 3
+  }
+}
