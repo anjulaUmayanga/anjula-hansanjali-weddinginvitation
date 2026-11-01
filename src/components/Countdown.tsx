@@ -58,9 +58,10 @@ function FlipDigit({ value, label }: { value: number; label: string }) {
 export function Countdown({ guest }: CountdownProps) {
   const reduce = useReducedMotion();
   const target = useMemo(() => new Date(siteConfig.weddingDateISO), []);
-  const [left, setLeft] = useState<TimeLeft>(() => getTimeLeft(target));
+  const [left, setLeft] = useState<TimeLeft | null>(null);
 
   useEffect(() => {
+    setLeft(getTimeLeft(target));
     const id = window.setInterval(() => setLeft(getTimeLeft(target)), 1000);
     return () => window.clearInterval(id);
   }, [target]);
@@ -106,7 +107,7 @@ export function Countdown({ guest }: CountdownProps) {
 
       <div className="mt-14 flex flex-wrap items-end justify-center gap-3 sm:gap-5">
         {units.map(({ key, label }) => (
-          <FlipDigit key={key} value={left[key]} label={label} />
+          <FlipDigit key={key} value={left?.[key] ?? 0} label={label} />
         ))}
       </div>
 

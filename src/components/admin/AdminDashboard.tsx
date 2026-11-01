@@ -13,6 +13,14 @@ type Reply = {
   publicWish: boolean;
 };
 
+type InviteGuest = {
+  slug: string;
+  type: "one" | "two" | "family" | string;
+  name: string;
+  maxGuests: number;
+  source?: "admin" | "file";
+};
+
 type AdminData = {
   counts: {
     attending: number;
@@ -22,7 +30,8 @@ type AdminData = {
     replies: number;
   };
   replies: Reply[];
-  pending: { slug: string; type: string; name: string; maxGuests: number }[];
+  pending: InviteGuest[];
+  guests?: InviteGuest[];
 };
 
 export function AdminDashboard() {
@@ -33,6 +42,12 @@ export function AdminDashboard() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "attending" | "declined">("all");
   const [loading, setLoading] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [guestType, setGuestType] = useState<"one" | "two" | "family">("one");
+  const [guestSlug, setGuestSlug] = useState("");
+  const [guestError, setGuestError] = useState("");
+  const [savingGuest, setSavingGuest] = useState(false);
+  const [copiedSlug, setCopiedSlug] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,6 +86,51 @@ export function AdminDashboard() {
     }
     setPassword("");
     await load();
+  };
+
+  const addGuest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGuestError("");
+    setSavingGuest(true);
+    try {
+      const res = await fetch("/api/admin/guests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: guestName,
+          type: guestType,
+          slug: guestSlug.trim() || undefined,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setGuestError(json.error || "Could not add this guest.");
+        return;
+      }
+      setGuestName("");
+      setGuestSlug("");
+      await load();
+    } finally {
+      setSavingGuest(false);
+    }
+  };
+
+  const removeGuest = async (slug: string) => {
+    const res = await fetch(`/api/admin/guests?slug=${encodeURIComponent(slug)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) await load();
+  };
+
+  const copyLink = async (slug: string) => {
+    const url = `${window.location.origin}/g/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedSlug(slug);
+      window.setTimeout(() => setCopiedSlug(""), 1600);
+    } catch {
+      window.prompt("Copy this invite link", url);
+    }
   };
 
   const logout = async () => {
@@ -233,6 +293,83 @@ export function AdminDashboard() {
               </tbody>
             </table>
           </div>
+
+          <section className="mt-10">
+            <h2 className="font-serif text-xl">Invite links</h2>
+            <p className="mt-1 text-sm text-ink/60">
+              Add a guest here, then copy their link. Individual, couple, and family links all open the invitation.
+            </p>
+            <form onSubmit={addGuest} className="mt-4 grid gap-3 sm:grid-cols-[1fr_160px_1fr_auto]">
+              <input
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                placeholder="Name, e.g. Hirusha or Anjula & Hansa"
+                className="rounded-sm border border-champagne bg-white/80 px-3 py-2"
+                required
+              />
+              <select
+                value={guestType}
+                onChange={(e) => setGuestType(e.target.value as "one" | "two" | "family")}
+                className="rounded-sm border border-champagne bg-white/80 px-3 py-2"
+              >
+                <option value="one">Individual</option>
+                <option value="two">Couple</option>
+                <option value="family">Family</option>
+              </select>
+              <input
+                value={guestSlug}
+                onChange={(e) => setGuestSlug(e.target.value)}
+                placeholder="Link name, optional (hirusha)"
+                className="rounded-sm border border-champagne bg-white/80 px-3 py-2"
+              />
+              <button
+                type="submit"
+                disabled={savingGuest}
+                className="rounded-sm bg-gradient-to-r from-gold-light via-gold to-gold-dark px-4 py-2 text-ivory disabled:opacity-60"
+              >
+                {savingGuest ? "Saving…" : "Add guest"}
+              </button>
+            </form>
+            {guestError && <p className="mt-2 text-sm text-wax">{guestError}</p>}
+
+            <ul className="mt-4 space-y-2">
+              {(data.guests ?? []).map((guest) => (
+                <li
+                  key={guest.slug}
+                  className="flex flex-col gap-2 rounded-sm border border-champagne bg-white/70 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {guest.type === "family"
+                        ? `Family of ${guest.name}`
+                        : guest.type === "two"
+                          ? `Mr. & Mrs. ${guest.name}`
+                          : `Mr. ${guest.name}`}
+                    </p>
+                    <p className="text-xs text-ink/50">/g/{guest.slug}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void copyLink(guest.slug)}
+                      className="gold-border rounded-sm px-3 py-1.5 text-sm"
+                    >
+                      {copiedSlug === guest.slug ? "Copied" : "Copy URL"}
+                    </button>
+                    {guest.source === "admin" && (
+                      <button
+                        type="button"
+                        onClick={() => void removeGuest(guest.slug)}
+                        className="rounded-sm bg-ink/10 px-3 py-1.5 text-sm"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
 
           {data.pending.length > 0 && (
             <div className="mt-10">

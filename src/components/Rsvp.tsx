@@ -27,8 +27,6 @@ export function Rsvp({ guest, onPublicWish }: RsvpProps) {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const maxGuests = guest.maxGuests;
-
   useEffect(() => {
     setName(guest.displayName === "Dear Guest" ? "" : guest.displayName);
   }, [guest.displayName]);
@@ -183,13 +181,13 @@ export function Rsvp({ guest, onPublicWish }: RsvpProps) {
             {attending === "yes" && (
               <div>
                 <label className="label-caps text-gold-dark" htmlFor="rsvp-count">
-                  {t("guests")} (max {maxGuests})
+                  {t("guests")}
                 </label>
                 <input
                   id="rsvp-count"
                   type="number"
                   min={1}
-                  max={maxGuests}
+                  max={10}
                   value={guestCount}
                   onChange={(e) => setGuestCount(Number(e.target.value))}
                   className="mt-2 w-full rounded-sm border border-champagne bg-white/70 px-3 py-2.5 font-serif"

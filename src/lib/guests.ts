@@ -165,6 +165,16 @@ export function toClientGuest(guest: ResolvedGuest): ClientGuest {
   };
 }
 
+export function resolveKnownGuest(slug: string, record: GuestRecord): ResolvedGuest {
+  const formatted = formatGuestDisplay(record.type, record.name);
+  return {
+    ...record,
+    ...formatted,
+    slug: sanitiseText(slug, 40).toLowerCase(),
+    isFallback: false,
+  };
+}
+
 export function getGuestMetadataTitle(guest: ResolvedGuest): string {
   if (guest.isFallback) return "You are invited";
   return `${guest.displayName}, you are invited`;

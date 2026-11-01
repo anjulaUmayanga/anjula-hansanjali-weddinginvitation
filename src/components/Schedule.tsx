@@ -2,7 +2,7 @@
 
 import { Clock3, Heart, Sparkles, UtensilsCrossed } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 
 import { OrnateName } from "@/components/ui/OrnateName";
 import { SectionReveal } from "@/components/ui/SectionReveal";
@@ -48,7 +48,11 @@ function ScheduleIcon({ item }: { item: ScheduleItem }) {
 
 export function Schedule() {
   const reduce = useReducedMotion();
-  const nextId = useMemo(() => getNextEventId(new Date()), []);
+  const [nextId, setNextId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNextId(getNextEventId(new Date()));
+  }, []);
 
   return (
     <SectionReveal id="schedule" className="relative mx-auto w-full max-w-2xl px-6 py-20 sm:py-24">

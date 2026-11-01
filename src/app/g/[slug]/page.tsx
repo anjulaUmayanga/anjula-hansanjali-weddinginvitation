@@ -3,33 +3,30 @@ import { notFound } from "next/navigation";
 
 import { InvitationApp } from "@/components/InvitationApp";
 import { siteConfig } from "@/data/config";
-import {
-  getAllGuestSlugs,
-  getGuest,
-  getGuestBySlug,
-  getGuestMetadataTitle,
-  toClientGuest,
-} from "@/lib/guests";
+import { findGuestRecord } from "@/lib/guest-directory";
+import { getGuest, getGuestMetadataTitle, resolveKnownGuest, toClientGuest } from "@/lib/guests";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ t?: string; g?: string }>;
 };
 
-export function generateStaticParams() {
-  return getAllGuestSlugs().map((slug) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const query = await searchParams;
-  const guest = getGuest({ slug, titleParam: query.t, nameParam: query.g });
+  const record = await findGuestRecord(slug);
 
-  if (!getGuestBySlug(slug) && !query.g) {
+  if (!record && !query.g) {
     return { title: "Invitation not found" };
   }
 
+  const guest = record
+    ? resolveKnownGuest(slug, record)
+    : getGuest({ slug, titleParam: query.t, nameParam: query.g });
   const title = getGuestMetadataTitle(guest);
+
   return {
     title,
     openGraph: {
@@ -42,13 +39,16 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 export default async function GuestInvitePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const query = await searchParams;
+  const record = await findGuestRecord(slug);
 
-  if (!getGuestBySlug(slug) && !query.g) {
+  if (!record && !query.g) {
     notFound();
   }
 
   const guest = toClientGuest(
-    getGuest({ slug, titleParam: query.t, nameParam: query.g }),
+    record
+      ? resolveKnownGuest(slug, record)
+      : getGuest({ slug, titleParam: query.t, nameParam: query.g }),
   );
 
   return <InvitationApp guest={guest} />;

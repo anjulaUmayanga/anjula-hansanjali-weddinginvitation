@@ -15,7 +15,7 @@ export const siteConfig = {
     },
     bride: {
       side: "Bride's Parents",
-      names: ["Mr. Petric De Silva", "Mrs. Nelum "],
+      names: ["Mr. Petric De Silva", "Mrs. Nelum Sanjeevani"],
     },
   },
   venue: {

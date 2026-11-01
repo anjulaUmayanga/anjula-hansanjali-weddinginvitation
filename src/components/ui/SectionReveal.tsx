@@ -23,9 +23,9 @@ export function SectionReveal({
     <Tag
       id={id}
       className={className}
-      initial={reduce ? false : { opacity: 0, y: 36, filter: "blur(8px)" }}
-      whileInView={reduce ? undefined : { opacity: 1, y: 0, filter: "blur(0px)" }}
-      viewport={{ once: true, amount: 0.2 }}
+      initial={reduce ? false : { opacity: 1, y: 16 }}
+      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.01, margin: "0px 0px 120px 0px" }}
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}

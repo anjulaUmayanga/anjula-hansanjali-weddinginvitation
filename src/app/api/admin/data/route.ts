@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { getAllGuests } from "@/lib/guests";
+import { listDirectoryGuests } from "@/lib/guest-directory";
 import { getSupabaseAdmin, type RsvpRow } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const guests = getAllGuests();
+  const directory = await listDirectoryGuests();
   let rows: RsvpRow[] = [];
 
   const supabase = getSupabaseAdmin();
@@ -43,9 +43,15 @@ export async function GET() {
   const totalGuests = attending.reduce((sum, r) => sum + (r.guests || 0), 0);
 
   const repliedSlugs = new Set(replies.map((r) => r.slug).filter(Boolean));
-  const pending = Object.entries(guests)
-    .filter(([slug]) => !repliedSlugs.has(slug))
-    .map(([slug, g]) => ({ slug, ...g }));
+  const pending = directory
+    .filter((guest) => !repliedSlugs.has(guest.slug))
+    .map((guest) => ({
+      slug: guest.slug,
+      type: guest.type,
+      name: guest.name,
+      maxGuests: guest.maxGuests,
+      source: guest.source,
+    }));
 
   return NextResponse.json({
     ok: true,
@@ -58,5 +64,6 @@ export async function GET() {
     },
     replies,
     pending,
+    guests: directory,
   });
 }
