@@ -1,15 +1,22 @@
 import "server-only";
 
 import guestsData from "@/data/guests.json";
-import { titleCaseName } from "@/lib/text";
+import {
+  formatGuestDisplay,
+  type GuestGender,
+  type GuestType,
+} from "@/lib/guest-display";
 import type { ClientGuest } from "@/types/guest";
 
-export type GuestType = "one" | "two" | "family";
+export type { GuestGender, GuestType };
+export { formatGuestDisplay, guestLabel } from "@/lib/guest-display";
 
 export type GuestRecord = {
   type: GuestType;
   name: string;
   maxGuests: number;
+  /** Required for individuals. Null/omitted for couples and families. */
+  gender?: GuestGender | null;
 };
 
 export type ResolvedGuest = GuestRecord & {
@@ -35,46 +42,6 @@ export function sanitiseText(value: unknown, max = MAX_PARAM_LENGTH): string {
     .replace(/[\u0000-\u001F\u007F]/g, "")
     .trim()
     .slice(0, max);
-}
-
-/**
- * Display formats:
- * - one  → Mr. Anjula
- * - two  → Mr. & Mrs. Anjula & Hansa
- * - family → Family of Jayasiri
- */
-export function formatGuestDisplay(type: GuestType, name: string): {
-  title: string;
-  displayName: string;
-  fullGreeting: string;
-} {
-  const n = titleCaseName(name);
-  switch (type) {
-    case "one":
-      return {
-        title: "Mr.",
-        displayName: `Mr. ${n}`,
-        fullGreeting: `Dear Mr. ${n}`,
-      };
-    case "two":
-      return {
-        title: "Mr. & Mrs.",
-        displayName: `Mr. & Mrs. ${n}`,
-        fullGreeting: `Dear Mr. & Mrs. ${n}`,
-      };
-    case "family":
-      return {
-        title: "Family of",
-        displayName: `Family of ${n}`,
-        fullGreeting: `Dear Family of ${n}`,
-      };
-    default:
-      return {
-        title: "",
-        displayName: n || FALLBACK_NAME,
-        fullGreeting: n ? `Dear ${n}` : FALLBACK_NAME,
-      };
-  }
 }
 
 export function getAllGuestSlugs(): string[] {
@@ -106,7 +73,7 @@ export type GuestLookupInput = {
 export function getGuest(input: GuestLookupInput = {}): ResolvedGuest {
   const fromSlug = getGuestBySlug(input.slug);
   if (fromSlug) {
-    const formatted = formatGuestDisplay(fromSlug.type, fromSlug.name);
+    const formatted = formatGuestDisplay(fromSlug.type, fromSlug.name, fromSlug.gender);
     return {
       ...fromSlug,
       ...formatted,
@@ -135,6 +102,7 @@ export function getGuest(input: GuestLookupInput = {}): ResolvedGuest {
       type,
       name: cleanName,
       maxGuests: type === "family" ? 4 : type === "two" ? 2 : 1,
+      gender: type === "one" ? "male" : null,
       slug: null,
       ...formatted,
       isFallback: false,
@@ -146,6 +114,7 @@ export function getGuest(input: GuestLookupInput = {}): ResolvedGuest {
     title: "",
     name: FALLBACK_NAME,
     maxGuests: 2,
+    gender: null,
     slug: null,
     displayName: FALLBACK_NAME,
     fullGreeting: FALLBACK_NAME,
@@ -166,7 +135,7 @@ export function toClientGuest(guest: ResolvedGuest): ClientGuest {
 }
 
 export function resolveKnownGuest(slug: string, record: GuestRecord): ResolvedGuest {
-  const formatted = formatGuestDisplay(record.type, record.name);
+  const formatted = formatGuestDisplay(record.type, record.name, record.gender);
   return {
     ...record,
     ...formatted,

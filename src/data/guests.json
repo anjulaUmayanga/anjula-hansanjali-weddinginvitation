@@ -2,6 +2,7 @@
   "anjula": {
     "type": "one",
     "name": "Anjula",
+    "gender": "male",
     "maxGuests": 1
   },
   "anjula-hansa": {
@@ -17,11 +18,13 @@
   "kasun": {
     "type": "one",
     "name": "Kasun",
+    "gender": "male",
     "maxGuests": 1
   },
   "nethmi": {
     "type": "one",
     "name": "Nethmi",
+    "gender": "female",
     "maxGuests": 1
   },
   "dilshan-amaya": {

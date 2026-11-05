@@ -1,4 +1,4 @@
--- Run this once in the Supabase SQL editor.
+-- Run this in the Supabase SQL editor (safe to re-run).
 
 create table if not exists public.rsvps (
   id uuid primary key default gen_random_uuid(),
@@ -19,8 +19,36 @@ create table if not exists public.guests (
   type text not null check (type in ('one', 'two', 'family')),
   name text not null,
   max_guests integer not null default 10 check (max_guests >= 1 and max_guests <= 10),
+  -- Only used when type = 'one'. Null for couples and families.
+  gender text check (gender is null or gender in ('male', 'female')),
   created_at timestamptz not null default now()
 );
+
+-- Existing projects: add the gender column if the guests table already exists.
+alter table public.guests
+  add column if not exists gender text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'guests_gender_check'
+  ) then
+    alter table public.guests
+      add constraint guests_gender_check
+      check (gender is null or gender in ('male', 'female'));
+  end if;
+end $$;
+
+-- Individuals should have a gender; couples/families must not.
+update public.guests
+set gender = 'male'
+where type = 'one' and gender is null;
+
+update public.guests
+set gender = null
+where type in ('two', 'family');
 
 alter table public.rsvps enable row level security;
 alter table public.guests enable row level security;

@@ -10,11 +10,22 @@ import {
 
 export const runtime = "nodejs";
 
-const createSchema = z.object({
-  name: z.string().trim().min(1).max(60),
-  type: z.enum(["one", "two", "family"]),
-  slug: z.string().trim().max(40).optional(),
-});
+const createSchema = z
+  .object({
+    name: z.string().trim().min(1).max(60),
+    type: z.enum(["one", "two", "family"]),
+    slug: z.string().trim().max(40).optional(),
+    gender: z.enum(["male", "female"]).nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.type === "one" && value.gender !== "male" && value.gender !== "female") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["gender"],
+        message: "Gender is required for an individual guest.",
+      });
+    }
+  });
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -33,10 +44,22 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "Check the name and guest type." }, { status: 400 });
+    const genderIssue = parsed.error.issues.find((issue) => issue.path[0] === "gender");
+    return NextResponse.json(
+      {
+        ok: false,
+        error: genderIssue?.message || "Check the name, guest type, and gender.",
+      },
+      { status: 400 },
+    );
   }
 
-  const result = await createDirectoryGuest(parsed.data);
+  const result = await createDirectoryGuest({
+    name: parsed.data.name,
+    type: parsed.data.type,
+    slug: parsed.data.slug,
+    gender: parsed.data.type === "one" ? parsed.data.gender : null,
+  });
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
   }

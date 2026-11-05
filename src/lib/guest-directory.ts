@@ -1,7 +1,7 @@
 import "server-only";
 
 import guestsData from "@/data/guests.json";
-import type { GuestRecord, GuestType } from "@/lib/guests";
+import type { GuestGender, GuestRecord, GuestType } from "@/lib/guests";
 import { sanitiseText } from "@/lib/guests";
 import { titleCaseName } from "@/lib/text";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -33,20 +33,28 @@ function normaliseSlug(slug: string): string {
   return sanitiseText(slug, 40).toLowerCase().replace(/[^a-z0-9-]/g, "");
 }
 
+function normaliseGender(value: unknown): GuestGender | null {
+  if (value === "male" || value === "female") return value;
+  return null;
+}
+
 type DbGuest = {
   slug: string;
   type: string;
   name: string;
   max_guests: number;
+  gender?: string | null;
 };
 
 function fromDb(row: DbGuest): DirectoryGuest | null {
   if (row.type !== "one" && row.type !== "two" && row.type !== "family") return null;
+  const gender = row.type === "one" ? normaliseGender(row.gender) : null;
   return {
     slug: row.slug,
     type: row.type,
     name: titleCaseName(row.name),
     maxGuests: row.max_guests || 10,
+    gender,
     source: "admin",
   };
 }
@@ -57,7 +65,7 @@ async function listDbGuests(): Promise<DirectoryGuest[] | null> {
 
   const { data, error } = await supabase
     .from("guests")
-    .select("slug, type, name, max_guests")
+    .select("slug, type, name, max_guests, gender")
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -75,7 +83,12 @@ export async function listDirectoryGuests(): Promise<DirectoryGuest[]> {
   const bySlug = new Map<string, DirectoryGuest>();
 
   for (const [slug, guest] of Object.entries(fileGuests)) {
-    bySlug.set(slug, { ...guest, slug, source: "file" });
+    bySlug.set(slug, {
+      ...guest,
+      gender: guest.type === "one" ? (guest.gender ?? "male") : null,
+      slug,
+      source: "file",
+    });
   }
 
   for (const guest of db ?? []) {
@@ -93,16 +106,27 @@ export async function findGuestRecord(slug: string | null | undefined): Promise<
   const db = await listDbGuests();
   const saved = db?.find((guest) => guest.slug === key);
   if (saved) {
-    return { type: saved.type, name: saved.name, maxGuests: saved.maxGuests };
+    return {
+      type: saved.type,
+      name: saved.name,
+      maxGuests: saved.maxGuests,
+      gender: saved.gender ?? null,
+    };
   }
 
-  return fileGuests[key] ?? null;
+  const file = fileGuests[key];
+  if (!file) return null;
+  return {
+    ...file,
+    gender: file.type === "one" ? (file.gender ?? "male") : null,
+  };
 }
 
 export async function createDirectoryGuest(input: {
   name: string;
   type: GuestType;
   slug?: string;
+  gender?: GuestGender | null;
 }): Promise<{ ok: true; guest: DirectoryGuest } | { ok: false; error: string; status: number }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) {
@@ -112,14 +136,21 @@ export async function createDirectoryGuest(input: {
   const name = titleCaseName(sanitiseText(input.name, 60));
   if (!name) return { ok: false, error: "Enter a guest name.", status: 400 };
 
+  if (input.type === "one" && input.gender !== "male" && input.gender !== "female") {
+    return { ok: false, error: "Select gender for an individual guest.", status: 400 };
+  }
+
   const slug = normaliseSlug(input.slug?.trim() || slugifyGuest(name, input.type));
   if (!slug) return { ok: false, error: "Enter a valid link name.", status: 400 };
+
+  const gender = input.type === "one" ? input.gender : null;
 
   const row = {
     slug,
     type: input.type,
     name,
     max_guests: 10,
+    gender,
   };
 
   const { error } = await supabase.from("guests").insert(row);
@@ -128,6 +159,13 @@ export async function createDirectoryGuest(input: {
       return { ok: false, error: "That invite link already exists.", status: 409 };
     }
     console.error("[guests] insert", error.message);
+    if (error.message.toLowerCase().includes("gender")) {
+      return {
+        ok: false,
+        error: "Add the gender column in Supabase first. Run supabase/schema.sql.",
+        status: 503,
+      };
+    }
     if (error.message.toLowerCase().includes("guests")) {
       return {
         ok: false,
@@ -140,7 +178,14 @@ export async function createDirectoryGuest(input: {
 
   return {
     ok: true,
-    guest: { slug, type: input.type, name, maxGuests: 10, source: "admin" },
+    guest: {
+      slug,
+      type: input.type,
+      name,
+      maxGuests: 10,
+      gender,
+      source: "admin",
+    },
   };
 }
 

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { guestLabel, type GuestGender } from "@/lib/guest-display";
+
 type Reply = {
   email: string;
   name: string;
@@ -18,6 +20,7 @@ type InviteGuest = {
   type: "one" | "two" | "family" | string;
   name: string;
   maxGuests: number;
+  gender?: GuestGender | null;
   source?: "admin" | "file";
 };
 
@@ -44,6 +47,7 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [guestType, setGuestType] = useState<"one" | "two" | "family">("one");
+  const [guestGender, setGuestGender] = useState<GuestGender>("male");
   const [guestSlug, setGuestSlug] = useState("");
   const [guestError, setGuestError] = useState("");
   const [savingGuest, setSavingGuest] = useState(false);
@@ -100,6 +104,7 @@ export function AdminDashboard() {
           name: guestName,
           type: guestType,
           slug: guestSlug.trim() || undefined,
+          gender: guestType === "one" ? guestGender : null,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -109,6 +114,7 @@ export function AdminDashboard() {
       }
       setGuestName("");
       setGuestSlug("");
+      setGuestGender("male");
       await load();
     } finally {
       setSavingGuest(false);
@@ -299,7 +305,14 @@ export function AdminDashboard() {
             <p className="mt-1 text-sm text-ink/60">
               Add a guest here, then copy their link. Individual, couple, and family links all open the invitation.
             </p>
-            <form onSubmit={addGuest} className="mt-4 grid gap-3 sm:grid-cols-[1fr_160px_1fr_auto]">
+            <form
+              onSubmit={addGuest}
+              className={`mt-4 grid gap-3 ${
+                guestType === "one"
+                  ? "sm:grid-cols-[1fr_140px_120px_1fr_auto]"
+                  : "sm:grid-cols-[1fr_160px_1fr_auto]"
+              }`}
+            >
               <input
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
@@ -316,6 +329,17 @@ export function AdminDashboard() {
                 <option value="two">Couple</option>
                 <option value="family">Family</option>
               </select>
+              {guestType === "one" && (
+                <select
+                  value={guestGender}
+                  onChange={(e) => setGuestGender(e.target.value as GuestGender)}
+                  className="rounded-sm border border-champagne bg-white/80 px-3 py-2"
+                  required
+                >
+                  <option value="male">Male (Mr.)</option>
+                  <option value="female">Female (Ms.)</option>
+                </select>
+              )}
               <input
                 value={guestSlug}
                 onChange={(e) => setGuestSlug(e.target.value)}
@@ -339,13 +363,7 @@ export function AdminDashboard() {
                   className="flex flex-col gap-2 rounded-sm border border-champagne bg-white/70 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="font-medium">
-                      {guest.type === "family"
-                        ? `Family of ${guest.name}`
-                        : guest.type === "two"
-                          ? `Mr. & Mrs. ${guest.name}`
-                          : `Mr. ${guest.name}`}
-                    </p>
+                    <p className="font-medium">{guestLabel(guest)}</p>
                     <p className="text-xs text-ink/50">/g/{guest.slug}</p>
                   </div>
                   <div className="flex gap-2">
@@ -377,13 +395,7 @@ export function AdminDashboard() {
               <ul className="mt-3 space-y-1 text-sm text-ink/75">
                 {data.pending.map((p) => (
                   <li key={p.slug}>
-                    <span className="font-medium">
-                      {p.type === "family"
-                        ? `Family of ${p.name}`
-                        : p.type === "two"
-                          ? `Mr. & Mrs. ${p.name}`
-                          : `Mr. ${p.name}`}
-                    </span>{" "}
+                    <span className="font-medium">{guestLabel(p)}</span>{" "}
                     <span className="text-ink/45">/g/{p.slug}</span>
                   </li>
                 ))}
